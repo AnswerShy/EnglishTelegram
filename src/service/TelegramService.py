@@ -28,6 +28,7 @@ class TelegramService:
     """
 
     def send_message(self, chat_id, text, options=None):
+        # logger(f"Sending message #{message_id} to {chat_id}: {text}")
         url = self.base_url + "sendMessage"
         
         payload = {
@@ -45,9 +46,8 @@ class TelegramService:
         
         response = requests.post(url, data=payload)
         data = response.json()
-
+        # print (data)
         message_id = data['result']['message_id']
-        logger(f"Sending message #{message_id} to {chat_id}: {text}")
 
         return message_id
 

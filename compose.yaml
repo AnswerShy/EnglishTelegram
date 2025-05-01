@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    volumes:
+      - ./src:/app
+    env_file:
+      - path: ./.env
+        required: true
