@@ -31,25 +31,29 @@ class AIService:
 
     def get_questions(self):
         logger("fetching new qestion pack")
-        response = requests.post(
-            self.url,
-            headers={
-                "Authorization": f"Bearer {self.key}",
-                "Content-Type": "application/json",
-            },
-            data=json.dumps({
-                "model": f"{self.model}",
-                "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-                ],
-                
-            })
-        )
-        data = response.json()
-        return data.get('choices', [{}])[0].get('message', {}).get('content')
+        try:
+            response = requests.post(
+                self.url,
+                headers={
+                    "Authorization": f"Bearer {self.key}",
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps({
+                    "model": f"{self.model}",
+                    "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                    ],
+                    
+                })
+            )
+            data = response.json()
+            return data.get('choices', [{}])[0].get('message', {}).get('content')
+        except Exception as e:
+            print  (f"Error fetching AI question: {e}")
+            return None
 
     def getNewAiQuestion(self):
         logger("Started generation new qestion pack")
@@ -77,8 +81,9 @@ class AIService:
                 correct_answer = quiz.get('correctAnswer')
 
                 options = []
-                for answer in answers:
-                    callback = 'correct_answer' if answer == correct_answer else 'wrong_answer'
+                for i, answer in enumerate(answers):
+                    isCorrect = 'T' if answer == correct_answer else 'F'
+                    callback = f"{isCorrect}:{i}"
                     options.append({
                         'text': answer,
                         'callback_data': callback
@@ -94,5 +99,5 @@ class AIService:
             return quizzes
         
         except Exception as e:
-            # print (f"Error parsing AI question: {e}")
+            print  (f"Error parsing AI question: {e}")
             return None

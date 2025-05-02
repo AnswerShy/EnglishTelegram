@@ -29,12 +29,16 @@ class BotController:
                 elif 'callback_query' in update:
                     chat_id = update['callback_query']['message']['chat']['id']
                     callback_data = update['callback_query']['data']
+                    callback_text = update['callback_query']['message']['text']
+                    callback_questions = update['callback_query']['message']['reply_markup']
                     return {
                         "offset": offset,
                         "type": "callback_query",
                         "chat_id": chat_id,
                         "message_text": None,
-                        "callback_data": callback_data
+                        "callback_data": callback_data,
+                        "callback_text": callback_text,
+                        "callback_questions": callback_questions,
                     }
         else:
             return {
@@ -49,7 +53,7 @@ class BotController:
         if update["type"] == "message":
             return self.handle_message(update["chat_id"], update["message_text"])
         elif update["type"] == "callback_query":
-            return self.handle_callback(update["chat_id"], update["callback_data"])
+            return self.handle_callback(update["chat_id"], update["callback_data"], update["callback_text"], update["callback_questions"])
         return {
             "type": "unknown"
         }
@@ -79,21 +83,34 @@ class BotController:
             
             return result
 
-    def handle_callback(self, chat_id, callback_data):
-        answer = callback_data
+    def handle_callback(self, chat_id, callback_data, callback_text, callback_options):
+        correctness_flag, pressed_index = callback_data.split(":")
+        pressed_index = int(pressed_index)
+
+        is_correct = correctness_flag == "T"
         
-        result = {
+        original_buttons = callback_options['inline_keyboard']
+        updated_buttons = []
+        
+        for row in original_buttons:
+            for button in row:
+                new_text = button['text']
+                new_callback = button['callback_data']
+                if new_callback == callback_data:
+                    new_text += " ✅" if is_correct else " ❌"
+                updated_buttons.append({"text": new_text, "callback_data": new_callback})
+
+        return {
             "type": "callback",
-            "isCorrect": None,
-            "chat_id": chat_id
+            "isCorrect": is_correct,
+            "chat_id": chat_id,
+            "callback_text": callback_text,
+            "updated_reply_markup": updated_buttons,
+            "pressed_index": pressed_index
         }
 
-        if answer == "wrong_answer":
-            result["isCorrect"] = False
-        else:
-            result["isCorrect"] = True
-        
-        return result
-
     def send_message(self, chat_id, message, options=None):
-        self.telegram_service.send_message(chat_id, message, options)
+        return self.telegram_service.send_message(chat_id, message, options)
+    
+    def editMessage(self, chat_id, message_id, message, options=None):
+        self.telegram_service.send_message(chat_id, message, options, message_id)

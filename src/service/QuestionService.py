@@ -16,12 +16,11 @@ class QuestionService:
         query = {"_id": {"$nin": ids}} if ids else {}
 
         return QuestionModel.findAll(query)
-
-
     
-    def createPack(pack):
+    def createPack(self, pack):
         new_pack = QuestionModel(
             theme=pack["theme"],
             questions=pack["questions"],
+            difficult=0
         )
         new_pack.save()

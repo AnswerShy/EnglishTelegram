@@ -27,39 +27,50 @@ class TelegramService:
                 )
     """
 
-    def send_message(self, chat_id, text, options=None):
-        # logger(f"Sending message #{message_id} to {chat_id}: {text}")
-        url = self.base_url + "sendMessage"
-        
-        payload = {
-            'chat_id': chat_id,
-            'text': text,
-        }
-        
+    def send_message(self, chat_id, text, options=None, message_id=None):
+        if message_id:
+            url = self.base_url + "editMessageText"
+            payload = {
+                'chat_id': chat_id,
+                'message_id': message_id,
+                'text': text,
+            }
+        else:
+            url = self.base_url + "sendMessage"            
+            payload = {
+                'chat_id': chat_id,
+                'text': text,
+            }
         if options:
+            inline_keyboard = []
+            short_buttons = []
+            
+            for opt in options:
+                button = {'text': opt['text'], 'callback_data': opt['callback_data']}
+                if len(opt['text']) < 6:
+                    short_buttons.append(button)
+                else:
+                    inline_keyboard.append([button])
+
+            if short_buttons:
+                inline_keyboard.insert(0, short_buttons)
+
             payload['reply_markup'] = json.dumps({
-                'inline_keyboard': [[
-                    {'text': opt['text'], 'callback_data': opt['callback_data']}
-                    for opt in options
-                ]]
+                'inline_keyboard': inline_keyboard
             })
-        
+
+
         response = requests.post(url, data=payload)
         data = response.json()
-        # print (data)
-        message_id = data['result']['message_id']
+        if message_id:
+            return message_id
+        else:
+            return data['result']['message_id']
 
-        return message_id
 
     def delete_message(self, chat_id, message_id):
         url = self.base_url + "deleteMessage"
         response = requests.post(url, data={'chat_id': chat_id, 'message_id': message_id})
 
         logger(f"Delete message {message_id} to {chat_id}")
-        return response.json()
-
-    def edit_message(self, chat_id, message_id, text):
-        url = self.base_url + "editMessageText"
-        response = requests.post(url, data={'chat_id': chat_id, 'message_id': message_id, 'text': text})
-        logger(f"Edit message {message_id} to {chat_id}: {text}")
         return response.json()
