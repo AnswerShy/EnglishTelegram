@@ -1,4 +1,6 @@
+from datetime import datetime
 from bson import ObjectId
+from pymongo import DESCENDING
 from models import QuestionModel
 from utils import logger
 
@@ -21,6 +23,26 @@ class QuestionService:
         new_pack = QuestionModel(
             theme=pack["theme"],
             questions=pack["questions"],
-            difficult=0
+            difficult=0,
         )
         new_pack.save()
+
+    def getQuestionsByTheme(theme):
+        packs = QuestionModel.findAll({"theme": theme})
+        if packs:
+            packs = packs.get("questions", [])
+            all_questions = []
+
+            for question in packs:
+                question_text = question.get("text")
+                if question_text:
+                    all_questions.append(question_text)
+
+            return all_questions
+        else:
+            return []
+
+
+    def getLastPackTime(self):
+        data = QuestionModel.findlast({})
+        return data

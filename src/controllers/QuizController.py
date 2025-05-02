@@ -1,3 +1,4 @@
+from bson import ObjectId
 from service import AIService, QuestionService
 from models import QuestionModel
 from utils import logger
@@ -6,13 +7,20 @@ class QuizController:
     def __init__(self):
         self.ai_service = AIService()
 
-    def generate_quiz(self):
-        data = self.ai_service.getNewAiQuestion()
+    def generate_quiz(self, history, theme):
+        data = self.ai_service.getNewAiQuestion(history, theme["title"])
         if data: 
             return {
-                "theme": "English Beginner",
+                "theme": ObjectId(theme["id"]),
                 "questions": data
             }
+        else:
+            return "Failed to generate quiz data."
+
+    def generate_themes(self, themes):
+        data = self.ai_service.getNewAiThemes(themes)
+        if data: 
+            return data
         else:
             return "Failed to generate quiz data."
 

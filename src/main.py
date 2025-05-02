@@ -1,13 +1,13 @@
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv, find_dotenv
 
 os.environ.clear()
 load_dotenv(find_dotenv())
 
-from service import UserService
+from models import ThemeModel
+from service import QuestionService, TelegramService
 from controllers import BotController, QuizController
-from utils import logger
-from views.TelegramView import TelegramView
 
 serverData = {
     "offset": 0,
@@ -18,48 +18,37 @@ def main():
     token = os.getenv("TELEGRAM_API_KEY")
     if not token:
         raise ValueError("Telegram Bot token is not provided. Set TELEGRAM_API_KEY in the .env file or pass it as an argument.")
-    bot = BotController(token)
-    view = TelegramView()
-    quiz_controller = QuizController()
-    # newPack = quiz_controller.generate_quiz()
-    # if isinstance(newPack, str):
-    #     print(newPack)
-    # else:
-    #     QuestionService().createPack(newPack)
+    QuizControllerInstance = QuizController()
+    TelegramServiceInstance = TelegramService(token)
+    QuestionServiceInstance = QuestionService()
+    ThemeServiceInstance = ThemeModel()
+    bot = BotController(TelegramServiceInstance, QuizControllerInstance)
+    lastPackTime = QuestionServiceInstance.getLastPackTime()
     while True:
+        now = datetime.now()
+        if not lastPackTime or (now - lastPackTime) >= timedelta(minutes=5):
+            theme = ThemeServiceInstance.pick_least_used_theme()
+            quesionts = QuestionService.getQuestionsByTheme(theme["title"])
+            print(theme.get("title"), quesionts)
+            newPack = QuizControllerInstance.generate_quiz(quesionts, theme)
+            if isinstance(newPack, str):
+                print(newPack)
+            else:
+                QuestionService().createPack(newPack)
+                lastPackTime = now
+        elif not lastPackTime or (now - lastPackTime) >= timedelta(hours=48):
+            theme = ThemeServiceInstance.find_all()
+            newThemes = QuizControllerInstance.generate_themes(theme)
+            if not isinstance(newThemes, str):
+                for data in newThemes:
+                    new_theme = ThemeModel(
+                        title=data,
+                        description=f"{data} questions pack"
+                    )
+                    new_theme.save()
         updateChecker = bot.handle_updates(offset=serverData["offset"])
         serverData["offset"] = updateChecker["offset"]
-        processed = bot.process_message(updateChecker)
-        if processed["type"] == "command":
-            if processed["command"] == "subscribe":
-                UserService.subscribe_user(updateChecker["chat_id"], updateChecker["username"])
-                bot.send_message(updateChecker["chat_id"], view.subscribe_message())
-            elif processed["command"] == "unsubscribe":
-                UserService.unsubscribe_user(updateChecker["chat_id"])
-                bot.send_message(updateChecker["chat_id"], view.unsubscribe_message())
-            elif processed["command"] == "startTest":
-                user = UserService.getOne(updateChecker["chat_id"]).to_dict()
-                if not user or not user.get("subscribed"):
-                    bot.send_message(updateChecker["chat_id"], "❌ You must subscribe first with /subscribe.")
-                quizData = quiz_controller.start_quiz(user)
-                if isinstance(quizData, str):
-                    bot.send_message(updateChecker["chat_id"], quizData)
-                else:
-                    quizMessage = bot.send_message(updateChecker["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
-                    UserService.update_session(updateChecker["chat_id"], quizData["selected_pack_id"], quizMessage)
-        elif processed["type"] == "callback":
-            user = UserService.getOne(updateChecker["chat_id"]).to_dict()
-            if processed["isCorrect"]:
-                logger(f"correct!")
-            else:
-                logger(f"wrong!")
-            bot.editMessage(updateChecker["chat_id"], user["active_session"]["message_id"], processed["callback_text"], processed["updated_reply_markup"])
-            quizData = quiz_controller.next_quiz(user)
-            if isinstance(quizData, str):
-                bot.send_message(updateChecker["chat_id"], quizData)
-            else:
-                quizMessage = bot.send_message(updateChecker["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
-                UserService.update_session(updateChecker["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"])
+        bot.process_message(updateChecker)
 
 if __name__ == "__main__":
     main()

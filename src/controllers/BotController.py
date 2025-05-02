@@ -1,11 +1,12 @@
-from service import TelegramService
+from service import TelegramService, UserService
 from utils import logger
 from views.TelegramView import TelegramView
 
 class BotController:
-    def __init__ (self, token):
-        self.telegram_service = TelegramService(token)
+    def __init__ (self, TGService, QuizController):
+        self.telegram_service = TGService
         self.view = TelegramView()
+        self.quiz_controller = QuizController
 
     def handle_updates(self, offset=None):
         updates = self.telegram_service.get_updates(offset)
@@ -50,37 +51,46 @@ class BotController:
             }
     
     def process_message(self, update):
-        if update["type"] == "message":
-            return self.handle_message(update["chat_id"], update["message_text"])
-        elif update["type"] == "callback_query":
-            return self.handle_callback(update["chat_id"], update["callback_data"], update["callback_text"], update["callback_questions"])
-        return {
-            "type": "unknown"
-        }
+        try:
+            if update["type"] == "message":
+                return self.handle_message(update["message_text"], update)
+            elif update["type"] == "callback_query":
+                return self.handle_callback(update["chat_id"], update["callback_data"], update["callback_text"], update["callback_questions"])
+            return {
+                "type": "unknown"
+            }
+        except Exception as e:
+            return e
 
-    def handle_message(self, chat_id, message_text):
+    def handle_message(self, message_text, data):
         if message_text:
             message = message_text.lower()
-            
             result = {
                 "type": "command",
                 "command": None,
-                "chat_id": chat_id
+                "chat_id": data["chat_id"]
             }
-
             if message == '/start':
-                self.telegram_service.send_message(chat_id, self.view.start_message())
+                self.send_message(data["chat_id"], self.view.start_message())
             elif message == '/subscribe':
-                result["command"] = "subscribe"
+                UserService.subscribe_user(data["chat_id"], data["username"])
+                self.send_message(data["chat_id"], self.view.subscribe_message())
             elif message == '/unsubscribe':
-                result["command"] = "unsubscribe"
-                self.telegram_service.send_message(chat_id, self.view.unsubscribe_message())
+                UserService.unsubscribe_user(data["chat_id"])
+                self.send_message(data["chat_id"], self.view.unsubscribe_message())
             elif message == '/test':
-                result["command"] = "startTest"
+                user = UserService.getOne(data["chat_id"]).to_dict()
+                if not user or not user.get("subscribed"):
+                    self.send_message(data["chat_id"], "❌ You must subscribe first with /subscribe.")
+                quizData = self.quiz_controller.start_quiz(user)
+                if isinstance(quizData, str):
+                    self.send_message(data["chat_id"], quizData)
+                else:
+                    quizMessage = self.send_message(data["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
+                    UserService.update_session(data["chat_id"], quizData["selected_pack_id"], quizMessage)
             else:
-                self.telegram_service.send_message(chat_id, "dsa")
+                self.send_message(data["chat_id"], "dsa")
                 logger(f"Unknown command: {message_text}")
-            
             return result
 
     def handle_callback(self, chat_id, callback_data, callback_text, callback_options):
@@ -100,7 +110,7 @@ class BotController:
                     new_text += " ✅" if is_correct else " ❌"
                 updated_buttons.append({"text": new_text, "callback_data": new_callback})
 
-        return {
+        updateChecker = {
             "type": "callback",
             "isCorrect": is_correct,
             "chat_id": chat_id,
@@ -108,6 +118,20 @@ class BotController:
             "updated_reply_markup": updated_buttons,
             "pressed_index": pressed_index
         }
+        
+        user = UserService.getOne(updateChecker["chat_id"]).to_dict()
+        if updateChecker["isCorrect"]:
+            logger(f"correct!")
+        else:
+            logger(f"wrong!")
+        print(updateChecker["chat_id"], user["active_session"]["message_id"], updateChecker["callback_text"], updateChecker["updated_reply_markup"])
+        self.editMessage(updateChecker["chat_id"], user["active_session"]["message_id"], updateChecker["callback_text"], updateChecker["updated_reply_markup"])
+        quizData = self.quiz_controller.next_quiz(user)
+        if isinstance(quizData, str):
+            self.send_message(updateChecker["chat_id"], quizData)
+        else:
+            quizMessage = self.send_message(updateChecker["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
+            UserService.update_session(updateChecker["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"])
 
     def send_message(self, chat_id, message, options=None):
         return self.telegram_service.send_message(chat_id, message, options)

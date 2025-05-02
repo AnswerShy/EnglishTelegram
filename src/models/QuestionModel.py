@@ -9,7 +9,7 @@ question_packs_collection = db['question_packs']
 
 class QuestionModel:
     def __init__(self, theme, difficult, questions, _id=None):
-        self.theme = theme
+        self.theme = ObjectId(theme)
         self.questions = questions
         self.created_at = datetime.now()
         self.difficult = difficult
@@ -18,7 +18,7 @@ class QuestionModel:
     @classmethod
     def from_dict(cls, data):
         model = cls(
-            theme=data["theme"],
+            theme=data.get("theme"),
             questions=data.get("questions"),
             difficult=data.get("difficult", 0),
             _id=data.get("_id")
@@ -31,6 +31,7 @@ class QuestionModel:
             "theme": self.theme,
             "questions": self.questions,
             "difficult": self.difficult,
+            "created_at": self.created_at
         }
     
     def save(self):
@@ -44,19 +45,17 @@ class QuestionModel:
         return data
         return cls.from_dict(data) if data else None
 
+    @classmethod
+    def findlast(cls, query):
+        data = question_packs_collection.find().sort("created_at", -1).limit(10)
+        for document in data:
+            return document.get("created_at")
+    
     @staticmethod
     def findAllBy(query):
         return question_packs_collection.distinct(query)
 
     @classmethod
     def findAll(cls, query):
-        cursor = question_packs_collection.find(query)
-        return [cls.from_dict(doc) for doc in cursor]
-
-    @staticmethod
-    def get_latest_pack_time():
-        latest = question_packs_collection.find_one(
-            sort=[("created_at", DESCENDING)],
-            projection={"created_at": 1}
-        )
-        return latest["created_at"] if latest else None
+        cursor = question_packs_collection.find_one(query)
+        return cursor
