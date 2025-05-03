@@ -49,7 +49,7 @@ class BotController:
                 "message_text": None,
                 "callback_data": None
             }
-    
+
     def process_message(self, update):
         try:
             if update["type"] == "message":
@@ -60,6 +60,7 @@ class BotController:
                 "type": "unknown"
             }
         except Exception as e:
+            logger(f"error: {e}")
             return e
 
     def handle_message(self, message_text, data):
@@ -84,6 +85,7 @@ class BotController:
                     self.send_message(data["chat_id"], "❌ You must subscribe first with /subscribe.")
                 quizData = self.quiz_controller.start_quiz(user)
                 if isinstance(quizData, str):
+                    UserService.update_session(data["chat_id"], None, None, None, True)
                     self.send_message(data["chat_id"], quizData)
                 else:
                     quizMessage = self.send_message(data["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
@@ -104,6 +106,9 @@ class BotController:
         
         for row in original_buttons:
             for button in row:
+                if "✅" in button['text'] or "❌" in button['text']:
+                    self.send_message(chat_id, self.view.sendFewTimes())
+                    return
                 new_text = button['text']
                 new_callback = button['callback_data']
                 if new_callback == callback_data:
@@ -127,14 +132,19 @@ class BotController:
         print(updateChecker["chat_id"], user["active_session"]["message_id"], updateChecker["callback_text"], updateChecker["updated_reply_markup"])
         self.editMessage(updateChecker["chat_id"], user["active_session"]["message_id"], updateChecker["callback_text"], updateChecker["updated_reply_markup"])
         quizData = self.quiz_controller.next_quiz(user)
-        if isinstance(quizData, str):
-            self.send_message(updateChecker["chat_id"], quizData)
+        if isinstance(quizData, bool):
+            if quizData == True:
+                UserService.update_session(updateChecker["chat_id"], None, None, True)
+                UserService.pushCompletedTask(updateChecker["chat_id"], user["active_session"].get("question_pack_id"))
+                self.send_message(updateChecker["chat_id"], self.view.endTest())
+            else:
+                self.send_message(updateChecker["chat_id"], self.view.error())
         else:
             quizMessage = self.send_message(updateChecker["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
             UserService.update_session(updateChecker["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"])
 
     def send_message(self, chat_id, message, options=None):
         return self.telegram_service.send_message(chat_id, message, options)
-    
+
     def editMessage(self, chat_id, message_id, message, options=None):
         self.telegram_service.send_message(chat_id, message, options, message_id)

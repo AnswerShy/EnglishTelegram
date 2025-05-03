@@ -1,2 +1,6 @@
+dotenv==0.9.9
+py-mon==2.1.0
+pymongo==4.12.1
+python-dotenv==1.1.0
 requests==2.31.0
-pymongo
+urllib3==1.26.15

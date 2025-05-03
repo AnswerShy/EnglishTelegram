@@ -25,22 +25,35 @@ class QuizController:
             return "Failed to generate quiz data."
 
     def start_quiz(self, user):
+        if user["active_session"] != None:
+            pack = user["active_session"]["question_pack_id"]
+            index = user["active_session"]["current_index"]
+
         completed_packs = user.get("completed_quizzes", [])
         uncompletedTasks = QuestionService.getUncompletedTasks(completed_packs)
         
         if not uncompletedTasks:
             return "🎉 You've completed all available quiz packs!"
 
-        selected_pack_id = uncompletedTasks[0]._id
-        questions = QuestionService.getPack(selected_pack_id)["questions"]
+        try:
+            selected_pack_id = pack if pack else uncompletedTasks[0].get("_id") if uncompletedTasks else None
+            selected_question_index = index if index else 0
+        except Exception as ex:
+            import traceback
+            traceback.print_exc()
+            print(f"🔥 Exception occurred: {repr(ex)}")
+            return "Something went wrong when starting the quiz."
+        
+        questions = QuestionService.getPack(selected_pack_id)
+
         if not questions:
             return "⚠️ Could not load the quiz. Try again later."
-        # print (questions)
+        
         return {
             "selected_pack_id": selected_pack_id,
             "options": {
-                "text": questions[0]["text"],
-                "qeustions": questions[0]["options"]
+                "text": questions["questions"][selected_question_index]["text"],
+                "qeustions": questions["questions"][selected_question_index]["options"]
             }
         }
         
@@ -49,9 +62,9 @@ class QuizController:
         index = user["active_session"].get("current_index") + 1
         questions = QuestionService.getPack(pack)["questions"]
         if len(questions) == index:
-            return "Complete"
+            return True
         if not questions:
-            return "⚠️ Could not load the quiz. Try again later."
+            return False
         return {
             "current": index,
             "selected_pack_id": pack,

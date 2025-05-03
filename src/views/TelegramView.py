@@ -13,3 +13,12 @@ class TelegramView:
 
     def correct_answer_message(self):
         return "Молодець!\n\n" 
+
+    def endTest(self):
+        return "🎉Вітаємо!\n\nТест завершено, чекайте на нові тести..." 
+    
+    def error(self):
+        return "Сталась якась помилка!\n\nСхоже, я трохи захворів🤒..." 
+    
+    def sendFewTimes(self):
+        return "U cant answer in same question two times!!"

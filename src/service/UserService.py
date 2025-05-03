@@ -35,9 +35,12 @@ class UserService:
             "message_id": message_id
         }
         if remove:
-            UserModel.update_user(chat_id, {"active_session": ""})
+            UserModel.update_user(chat_id, {"$set": {"active_session": active_session}})
         else:
-            return UserModel.update_user(chat_id, {"active_session": active_session})
+            return UserModel.update_user(chat_id, {"$set": {"active_session": active_session}})
+
+    def pushCompletedTask(chat_id, task_id):
+        return UserModel.update_user(chat_id, {"$push": {"completed_quizzes": task_id}})
 
     def getOne(chat_id):
         return UserModel.find_one({"chat_id": chat_id})

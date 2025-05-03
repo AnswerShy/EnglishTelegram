@@ -94,7 +94,7 @@ class AIService:
             if match:
                 json_content = match.group(1)
             else:
-                # print ("No JSON block found.")
+                print ("No JSON block found.")
                 return None
             
             parsed = json.loads(json_content)
@@ -136,7 +136,7 @@ class AIService:
             if match:
                 json_content = match.group(1)
             else:
-                # print ("No JSON block found.")
+                print ("No JSON block found.")
                 return None
             
             try:

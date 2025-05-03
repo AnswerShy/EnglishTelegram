@@ -47,9 +47,20 @@ class UserModel:
 
     @classmethod
     def update_user(cls, chat_id, update_fields):
+        """
+            Update a user's data in the users collection.
+            Parameters:
+                chat_id (int | str): The user's unique chat ID.
+                update_fields (dict): A MongoDB update operator and its corresponding fields.
+                    Example formats:
+                        {"$set": {"key": value}}       # Set field(s)
+                        {"$addToSet": {"key": value}}  # Add to array, avoiding duplicates
+                        {"$push": {"key": value}}      # Append to array
+            Returns:
+                bool: True if the document was modified, False otherwise.
+        """
         result = users_collection.update_one(
             {"chat_id": chat_id},
-            {"$set": update_fields}
+            update_fields
         )
         return result.modified_count > 0
-

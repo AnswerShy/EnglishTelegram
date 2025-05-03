@@ -13,11 +13,10 @@ class QuestionService:
     
     def getUncompletedTasks(completed_models):
         completed_models = completed_models or []
-        ids = [ObjectId(str(model._id)) for model in completed_models if model and model._id]
-        
+        ids = [ObjectId(str(model)) for model in completed_models if model]
         query = {"_id": {"$nin": ids}} if ids else {}
-
-        return QuestionModel.findAll(query)
+        models = QuestionModel.findAll(query)
+        return models
     
     def createPack(self, pack):
         new_pack = QuestionModel(

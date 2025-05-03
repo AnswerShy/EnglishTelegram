@@ -26,7 +26,7 @@ def main():
     lastPackTime = QuestionServiceInstance.getLastPackTime()
     while True:
         now = datetime.now()
-        if not lastPackTime or (now - lastPackTime) >= timedelta(minutes=5):
+        if not lastPackTime or (now - lastPackTime) >= timedelta(hours=12):
             theme = ThemeServiceInstance.pick_least_used_theme()
             quesionts = QuestionService.getQuestionsByTheme(theme["title"])
             print(theme.get("title"), quesionts)
@@ -36,7 +36,7 @@ def main():
             else:
                 QuestionService().createPack(newPack)
                 lastPackTime = now
-        elif not lastPackTime or (now - lastPackTime) >= timedelta(hours=48):
+        elif not lastPackTime or (now - lastPackTime) >= timedelta(hours=240):
             theme = ThemeServiceInstance.find_all()
             newThemes = QuizControllerInstance.generate_themes(theme)
             if not isinstance(newThemes, str):
