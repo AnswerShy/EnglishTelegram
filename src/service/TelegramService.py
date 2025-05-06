@@ -28,6 +28,18 @@ class TelegramService:
     """
 
     def send_message(self, chat_id, text, options=None, message_id=None):
+        """
+            Send Message
+            Parameters:
+                chat_id (int | str): The user's unique chat ID.
+                text (str): Message Text.
+                options (array): Array of options for keyboard
+                    Example:
+                    [{ 'text': 'text for button', 'callback_data': 'callback data' }]
+                message_id (str): For editing message.
+            Returns:
+                Message ID (str)
+        """
         if message_id:
             url = self.base_url + "editMessageText"
             payload = {

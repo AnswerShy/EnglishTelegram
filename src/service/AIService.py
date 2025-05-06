@@ -70,11 +70,11 @@ class AIService:
             data = response.json()
             return data.get('choices', [{}])[0].get('message', {}).get('content')
         except Exception as e:
-            print  (f"Error fetching AI question: {e}")
+            logger(f"Error fetching AI question: {e}")
             return None
 
     def getNewAiQuestion(self, history, theme):
-        logger("Started generation new qestion pack")
+        logger(f"Started generation new qestion pack: theme={theme}")
         prompt = buildQuizPrompt(history, theme)
         data = self.get_questions(prompt)
         return self.parse_ai_questions(data) if data else None
@@ -94,7 +94,7 @@ class AIService:
             if match:
                 json_content = match.group(1)
             else:
-                print ("No JSON block found.")
+                logger("No JSON block found.")
                 return None
             
             parsed = json.loads(json_content)
@@ -124,7 +124,7 @@ class AIService:
             return quizzes
         
         except Exception as e:
-            print  (f"Error parsing AI question: {e}")
+            logger(f"Error parsing AI question: {e}")
             return None
 
     @staticmethod
@@ -136,7 +136,7 @@ class AIService:
             if match:
                 json_content = match.group(1)
             else:
-                print ("No JSON block found.")
+                logger("No JSON block found.")
                 return None
             
             try:
@@ -146,11 +146,11 @@ class AIService:
                 else:
                     raise ValueError("AI response is not a valid list of strings")
             except json.JSONDecodeError as e:
-                print(f"JSON decode error: {e}")
+                logger(f"JSON decode error: {e}")
             except Exception as e:
-                print(f"Error parsing AI themes: {e}")
+                logger(f"Error parsing AI themes: {e}")
             return []
         
         except Exception as e:
-            print  (f"Error parsing AI question: {e}")
+            logger(f"Error parsing AI question: {e}")
             return None

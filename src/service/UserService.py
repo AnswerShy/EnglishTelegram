@@ -1,4 +1,5 @@
 from models import UserModel
+from utils import logger
 
 class UserService:
     def __init__(self, chat_id, questions):
@@ -10,7 +11,7 @@ class UserService:
     def subscribe_user(chat_id, username=None):
         user = UserModel.find_one({"chat_id": chat_id})
         if user:
-            UserModel.update_user(chat_id, {"subscribed": True})
+            UserModel.update_user(chat_id, {"$set": {"subscribed": True}})
             return False
         
         new_user = UserModel(
@@ -25,19 +26,48 @@ class UserService:
         return True
     
     def unsubscribe_user(chat_id):
-        return UserModel.update_user(chat_id, {"subscribed": False})
+        return UserModel.update_user(chat_id, {"$set": {"subscribed": False}})
         
-    def update_session(chat_id, packId, message_id, index=0, remove=False):
+    def update_session(chat_id, pack_id, message_id, index=0, last_question=""):
+        """
+            Update a user's session
+            Parameters:
+                chat_id (int | str): The user's unique chat ID.
+                pack_id (str): pack id.
+                message_id (str): last quiz message id.
+                index (int): index of qestion.
+                last_question (str): last question for addition check
+            Returns:
+                bool: True if the document was modified, False otherwise.
+        """
         active_session = {
-            "question_pack_id": packId,
+            "question_pack_id": pack_id,
             "current_index": index,
+            "last_question": last_question,
             "wrong_answers": [],
             "message_id": message_id
         }
-        if remove:
-            UserModel.update_user(chat_id, {"$set": {"active_session": active_session}})
+        logger(f"updating session... \v\r{active_session}")
+        return UserModel.update_user(chat_id, {"$set": {"active_session": active_session}})
+
+    def delete_session(chat_id,):
+        return UserModel.update_user(chat_id, {"$set": {"active_session": []}})
+            
+    def updateTheme(chat_id, theme_id):
+        user = UserModel.find_one({"chat_id": chat_id}).to_dict()
+        if theme_id in user["picked_themes"]:
+            UserModel.update_user(chat_id, {"$pull": {"picked_themes": theme_id}})
+            return False
         else:
-            return UserModel.update_user(chat_id, {"$set": {"active_session": active_session}})
+            UserModel.update_user(chat_id, {"$push": {"picked_themes": theme_id}})
+            return True
+
+    def getSubscribedThemes(chat_id):
+        user = UserModel.find_one({"chat_id": chat_id}).to_dict()
+        if not user["picked_themes"]:
+            return []
+        else:
+            return user["picked_themes"]
 
     def pushCompletedTask(chat_id, task_id):
         return UserModel.update_user(chat_id, {"$push": {"completed_quizzes": task_id}})

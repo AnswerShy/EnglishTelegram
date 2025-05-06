@@ -59,3 +59,4 @@ class QuestionModel:
     def findAll(cls, query):
         cursor = question_packs_collection.find(query)
         return [data for data in cursor]
+    

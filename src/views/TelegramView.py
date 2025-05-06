@@ -22,3 +22,12 @@ class TelegramView:
     
     def sendFewTimes(self):
         return "U cant answer in same question two times!!"
+    
+    def doNotRush(self):
+        return "Не спіши відповідати, встигнеш 😉"
+
+    def StartingTheme(self, theme: str):
+        return f"Тема тесту: {theme}"
+
+    def generatingProcess(self, theme: str):
+        return f"Генеруємо тест на тему {theme}"

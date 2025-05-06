@@ -5,11 +5,12 @@ from .db import db
 users_collection = db['users']
 
 class UserModel:
-    def __init__(self, chat_id, name, experience=0, completed_quizzes=None, active_session=None, _id=None):
+    def __init__(self, chat_id, name, picked_themes=None, experience=0, completed_quizzes=None, active_session=None, _id=None):
         self.chat_id = chat_id
         self.name = name
         self.experience = experience
         self.subscribed = True
+        self.picked_themes = picked_themes or []
         self.completed_quizzes = completed_quizzes
         self.active_session = active_session
         self._id = ObjectId(_id) if _id else None
@@ -20,6 +21,7 @@ class UserModel:
             chat_id=data["chat_id"],
             name=data.get("name"),
             experience=data.get("experience", 0),
+            picked_themes=data.get("picked_themes"),
             completed_quizzes=data.get("completed_quizzes"),
             active_session=data.get("active_session"),
             _id=data.get("_id")
@@ -30,6 +32,7 @@ class UserModel:
             "chat_id": self.chat_id,
             "name": self.name,
             "experience": self.experience,
+            "picked_themes": self.picked_themes,
             "completed_quizzes": self.completed_quizzes,
             "active_session": self.active_session,
             "subscribed": self.subscribed
@@ -56,6 +59,7 @@ class UserModel:
                         {"$set": {"key": value}}       # Set field(s)
                         {"$addToSet": {"key": value}}  # Add to array, avoiding duplicates
                         {"$push": {"key": value}}      # Append to array
+                        {"$pull": {"key": value}}      # Remove to array
             Returns:
                 bool: True if the document was modified, False otherwise.
         """

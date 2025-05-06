@@ -7,13 +7,17 @@ class QuizController:
     def __init__(self):
         self.ai_service = AIService()
 
-    def generate_quiz(self, history, theme):
+    def generate_quiz(self, theme, difficult=0):
+        if theme:
+            history = QuestionService.getQuestionsByTheme(theme["id"])
+        logger([history, theme["title"]])
         data = self.ai_service.getNewAiQuestion(history, theme["title"])
         if data: 
-            return {
+            return QuestionService().createPack({
                 "theme": ObjectId(theme["id"]),
-                "questions": data
-            }
+                "questions": data,
+                "difficult": difficult
+            })
         else:
             return "Failed to generate quiz data."
 
@@ -24,32 +28,23 @@ class QuizController:
         else:
             return "Failed to generate quiz data."
 
-    def start_quiz(self, user):
-        if user["active_session"] != None:
-            pack = user["active_session"]["question_pack_id"]
-            index = user["active_session"]["current_index"]
-
-        completed_packs = user.get("completed_quizzes", [])
-        uncompletedTasks = QuestionService.getUncompletedTasks(completed_packs)
-        
-        if not uncompletedTasks:
-            return "🎉 You've completed all available quiz packs!"
-
+    def start_quiz(self, user, ready_pack):
         try:
-            selected_pack_id = pack if pack else uncompletedTasks[0].get("_id") if uncompletedTasks else None
-            selected_question_index = index if index else 0
+            selected_pack_id = ready_pack.get("_id") if ready_pack else None
+            selected_question_index = user["active_session"]["current_index"] if user["active_session"] else 0
         except Exception as ex:
             import traceback
             traceback.print_exc()
-            print(f"🔥 Exception occurred: {repr(ex)}")
+            logger(f"🔥 Exception occurred: {repr(ex)}")
             return "Something went wrong when starting the quiz."
         
-        questions = QuestionService.getPack(selected_pack_id)
+        questions = ready_pack
 
         if not questions:
             return "⚠️ Could not load the quiz. Try again later."
         
         return {
+            "current": selected_question_index,
             "selected_pack_id": selected_pack_id,
             "options": {
                 "text": questions["questions"][selected_question_index]["text"],
@@ -60,7 +55,7 @@ class QuizController:
     def next_quiz(self, user):
         pack = user["active_session"].get("question_pack_id")
         index = user["active_session"].get("current_index") + 1
-        questions = QuestionService.getPack(pack)["questions"]
+        questions = QuestionService.getPack(pack)["questions"] if pack else []
         if len(questions) == index:
             return True
         if not questions:

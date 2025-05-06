@@ -26,41 +26,17 @@ class ThemeModel:
         data = list(themes_collection.find({}))
         array = []
         for theme in data:
-            array.append(theme.get("title"))
+            array.append({'theme_name': theme["title"], 'theme_id': theme["_id"]})
         return array
 
     @classmethod
     def find_by_name(cls, name):
         return themes_collection.find_one({"name": name})
-    
-    @staticmethod
-    def get_all_themes_with_count():
-        pipeline = [
-            {
-                "$lookup": {
-                    "from": "question_packs",
-                    "localField": "_id",
-                    "foreignField": "theme",
-                    "as": "packs"
-                }
-            },
-            {
-                "$project": {
-                    "title": 1,
-                    "packCount": {"$size": "$packs"}
-                }
-            },
-            {
-                "$sort": {"packCount": 1}
-            }
-        ]
-        return list(themes_collection.aggregate(pipeline))
-    
-    @staticmethod
-    def pick_least_used_theme():
-        themes = ThemeModel.get_all_themes_with_count()
-        if themes:
-            theme = themes[0]
-            theme["id"] = str(theme["_id"])
-            return theme
+
+    def pick_least_used_theme(self, sorted_themes):
+        for theme_id, _ in sorted_themes:
+            theme = themes_collection.find_one({"_id": ObjectId(theme_id)})
+            if theme:
+                theme["id"] = str(theme["_id"])
+                return theme
         return None
