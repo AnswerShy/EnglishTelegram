@@ -106,6 +106,14 @@ class BotController:
                 "chat_id": chat_id,
                 "callback_message_id": callback_message_id
             }
+        elif correctness_flag == "difficult_pick":
+            return {
+                "type": "callback",
+                "command": correctness_flag,
+                "data": pressed_index,
+                "chat_id": chat_id,
+                "callback_message_id": callback_message_id
+            }
         elif correctness_flag == "T" or correctness_flag == "F":
             pressed_index = int(pressed_index)
             is_correct = correctness_flag == "T"

@@ -54,20 +54,26 @@ class UserService:
         return UserModel.update_user(chat_id, {"$set": {"active_session": []}})
             
     def updateTheme(chat_id, theme_id):
-        user = UserModel.find_one({"chat_id": chat_id}).to_dict()
-        if theme_id in user["picked_themes"]:
+        user = UserModel.find_one({"chat_id": chat_id})
+        if user:
+            user = user.to_dict()
+        if user and theme_id in user["picked_themes"]:
             UserModel.update_user(chat_id, {"$pull": {"picked_themes": theme_id}})
             return False
-        else:
+        elif user:
             UserModel.update_user(chat_id, {"$push": {"picked_themes": theme_id}})
             return True
+        return False
+
+    def updateDifficult(chat_id, difficult):
+        return UserModel.update_user(chat_id, {"$set": {"difficult": difficult}})
 
     def getSubscribedThemes(chat_id):
-        user = UserModel.find_one({"chat_id": chat_id}).to_dict()
-        if not user["picked_themes"]:
+        user = UserModel.find_one({"chat_id": chat_id})
+        if not user or not user.to_dict()["picked_themes"]:
             return []
         else:
-            return user["picked_themes"]
+            return user.to_dict()["picked_themes"]
 
     def pushCompletedTask(chat_id, task_id):
         return UserModel.update_user(chat_id, {"$push": {"completed_quizzes": task_id}})

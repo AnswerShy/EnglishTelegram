@@ -1,21 +1,22 @@
 from datetime import datetime
 from bson import ObjectId
 from pymongo import DESCENDING
-from models import QuestionModel
+from models import DifficultModel, QuestionModel
 from utils import logger
 
 class QuestionService:
     def getPack(id):
-        return QuestionModel.findOne({"_id": id})
+        return QuestionModel.findOne({"_id": ObjectId(id)})
 
     def getPacks():
         return QuestionModel.findAll()
     
-    def getUncompletedTasks(completed_models, theme):
+    def getUncompletedTasks(completed_models, theme, difficult):
         completed_models = completed_models or []
         ids = [ObjectId(str(model)) for model in completed_models if model]
         query = {
-            "theme": ObjectId(str(theme["_id"]))
+            "theme": ObjectId(str(theme["_id"])),
+            "difficult": ObjectId(str(difficult)),
         }
         if ids:
             query["_id"] = {"$nin": ids}
@@ -26,14 +27,15 @@ class QuestionService:
         new_pack = QuestionModel(
             theme=pack["theme"],
             questions=pack["questions"],
-            difficult=0,
+            difficult=pack["difficult"]
         )
         new_pack.save()
         return new_pack
 
-    def getQuestionsByTheme(theme):
+    def get_questions_by_theme_and_difficult(theme, difficult):
         query = {
-            "theme": ObjectId(str(theme))
+            "theme": ObjectId(str(theme)),
+            "difficult": ObjectId(str(difficult)),
         }
         packs = QuestionModel.findAll(query)
         all_questions = []
@@ -69,3 +71,7 @@ class QuestionService:
         sorted_themes = sorted(theme_usage.items(), key=lambda x: x[1])
 
         return sorted_themes if sorted_themes else None
+    
+    @staticmethod
+    def get_difficult_name(id):
+        return DifficultModel().find(id)

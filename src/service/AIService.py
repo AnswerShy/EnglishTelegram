@@ -24,11 +24,12 @@ def buildThemePrompt(themes):
     {themeData}
     """
 
-def buildQuizPrompt(history, theme):
+def buildQuizPrompt(history, theme, difficult):
     themeData = theme if theme else "IT"
+    difficultData = difficult if difficult else "Begginer"
     historyData = f"Не повторюй такі питання: {json.dumps(history, ensure_ascii=False, indent=2)}" if history else ""
     return f"""
-        Згенеруй масив із 10 об'єктів для тестування знань з англійської мови на рівні Beginner у форматі нв тему {themeData}:
+        Згенеруй масив із 10 об'єктів для тестування знань з англійської мови на рівні {difficultData} на тему {themeData} у форматі:
         ```json
         [
         {{
@@ -73,9 +74,9 @@ class AIService:
             logger(f"Error fetching AI question: {e}")
             return None
 
-    def getNewAiQuestion(self, history, theme):
-        logger(f"Started generation new qestion pack: theme={theme}")
-        prompt = buildQuizPrompt(history, theme)
+    def getNewAiQuestion(self, history, theme, difficult):
+        logger(f"Started generation new qestion pack: theme={theme} difficult={difficult}")
+        prompt = buildQuizPrompt(history, theme, difficult)
         data = self.get_questions(prompt)
         return self.parse_ai_questions(data) if data else None
     

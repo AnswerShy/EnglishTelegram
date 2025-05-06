@@ -24,16 +24,15 @@ def main():
     VeiwInstance = TelegramView()
     QuizControllerInstance = QuizController()
     TelegramServiceInstance = TelegramService(token)
-    QuestionServiceInstance = QuestionService()
     ThemeServiceInstance = ThemeModel()
     SubscribeControllerInstance = SubscribeController(TelegramServiceInstance)
     bot = BotController(TelegramServiceInstance, QuizControllerInstance, SubscribeControllerInstance)
-    lastPackTime = QuestionServiceInstance.getLastPackTime()
 
     while True:
         updateChecker = bot.handle_updates(offset=serverData["offset"])
         serverData["offset"] = updateChecker["offset"]
         data = bot.process_message(updateChecker)
+
         if data and data["type"] == "command":
             if data["command"] == 'sub':
                 SubscribeControllerInstance.subscribeUser(data["chat_id"])
@@ -41,6 +40,7 @@ def main():
                 SubscribeControllerInstance.unsubscribeUser(data["chat_id"])
             elif data["command"] == 'options':
                 SubscribeControllerInstance.pickThemesMessage(data["chat_id"])
+                SubscribeControllerInstance.pickDifficult(data["chat_id"])
             elif data["command"] == 'stop':
                 UserService.delete_session(data["chat_id"])
             elif data["command"] == 'test':
@@ -48,56 +48,55 @@ def main():
 
                 if not user or not user.get("subscribed"):
                     TelegramServiceInstance.send_message(data["chat_id"], "❌ You must subscribe first with /subscribe.")
-                elif not user.get("picked_themes"): 
-                    TelegramServiceInstance.send_message(data["chat_id"], "❌ You must schoose themes first /options.")
-                    
-                active_session = user["active_session"]
-
-                if active_session:
-                    logger("form active session")
-                    pack = QuestionService.getPack(user["active_session"]["question_pack_id"])
-                    if pack:
-                        quizData = QuizControllerInstance.start_quiz(user, pack)
+                elif not user.get("picked_themes") or not user.get("difficult"): 
+                    TelegramServiceInstance.send_message(data["chat_id"], "❌ You must schoose themes and difficult first /options.")
+                else:
+                    active_session = user["active_session"]
+                    if active_session:
+                        pack = QuestionService.getPack(user["active_session"]["question_pack_id"])
+                        if pack:
+                            quizData = QuizControllerInstance.start_quiz(user, pack)
+                        else:
+                            UserService.delete_session(data["chat_id"])
                     else:
+                        sortedUserThemesUsage = QuestionService.get_users_packs_usage(user)
+                        theme = ThemeServiceInstance.pick_least_used_theme(sortedUserThemesUsage)
+                        
+                        completed_packs = user.get("completed_quizzes", [])
+                        difficult = user.get("difficult", [])
+                        uncompletedTasks = QuestionService.getUncompletedTasks(completed_packs, theme, difficult)
+                        if not uncompletedTasks:
+                            TelegramServiceInstance.send_message(data["chat_id"], VeiwInstance.generatingProcess(theme["title"]))
+                            newPack = QuizControllerInstance.generate_quiz(theme, difficult)
+                            print(newPack)
+                            quizData = QuizControllerInstance.start_quiz(user, newPack)
+                        else:
+                            pack = uncompletedTasks[0]
+                            quizData = QuizControllerInstance.start_quiz(user, pack)
+                            TelegramServiceInstance.send_message(data["chat_id"], VeiwInstance.StartingTheme(theme["title"]))
+                    if isinstance(quizData, str):
                         UserService.delete_session(data["chat_id"])
-                else:
-                    sortedUserThemesUsage = QuestionService.get_users_packs_usage(user)
-                    theme = ThemeServiceInstance.pick_least_used_theme(sortedUserThemesUsage)
-                    
-                    completed_packs = user.get("completed_quizzes", [])
-                    uncompletedTasks = QuestionService.getUncompletedTasks(completed_packs, theme)
-                    if not uncompletedTasks:
-                        TelegramServiceInstance.send_message(data["chat_id"], VeiwInstance.generatingProcess(theme["title"]))
-                        
-                        logger([sortedUserThemesUsage, theme["_id"]])
-                        
-                        newPack = QuizControllerInstance.generate_quiz(theme)
-                        print(newPack)
-                        quizData = QuizControllerInstance.start_quiz(user, newPack)
+                        TelegramServiceInstance.send_message(data["chat_id"], quizData)
                     else:
-                        pack = uncompletedTasks[0]
-                        quizData = QuizControllerInstance.start_quiz(user, pack)
-                        TelegramServiceInstance.send_message(data["chat_id"], VeiwInstance.StartingTheme(theme["title"]))
-
-                if isinstance(quizData, str):
-                    UserService.delete_session(data["chat_id"])
-                    TelegramServiceInstance.send_message(data["chat_id"], quizData)
-                else:
-                    quizMessage = TelegramServiceInstance.send_message(data["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
-                    UserService.update_session(data["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"], quizData["options"].get("text"))
-                
-                if not active_session and theme and uncompletedTasks and len(uncompletedTasks) < 2:
-                    print(theme and uncompletedTasks and len(uncompletedTasks) < 2)
-                    newPack = QuizControllerInstance.generate_quiz(theme)
+                        quizMessage = TelegramServiceInstance.send_message(data["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
+                        UserService.update_session(data["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"], quizData["options"].get("text"))
+                    
+                    if not active_session and theme and uncompletedTasks and len(uncompletedTasks) < 2:
+                        print(theme and uncompletedTasks and len(uncompletedTasks) < 2)
+                        newPack = QuizControllerInstance.generate_quiz(theme, difficult)
 
         if data and data["type"] == "callback":
             if data["command"] == 'theme_pick':
                 changedTheme = SubscribeControllerInstance.addTheme(data["chat_id"], data["data"])
                 SubscribeControllerInstance.pickThemesMessage(data["chat_id"], data["callback_message_id"])
                 logger(f"{changedTheme}")
+            if data["command"] == 'difficult_pick':
+                changedTheme = SubscribeControllerInstance.setDifficult(data["chat_id"], data["data"])
+                SubscribeControllerInstance.pickDifficult(data["chat_id"], data["callback_message_id"])
+                logger(f"{changedTheme}")
             if data["command"] == 'T' or data["command"] == 'F':
                 user = UserService.getOne(data["chat_id"]).to_dict()
-                if not user["active_session"]["last_question"] == data["callback_text"]:
+                if user["active_session"] and not user["active_session"]["last_question"] == data["callback_text"]:
                     TelegramServiceInstance.send_message(data["chat_id"], VeiwInstance.doNotRush())
                 else:
                     TelegramServiceInstance.send_message(data["chat_id"], data["callback_text"], data["updated_reply_markup"], user["active_session"]["message_id"])

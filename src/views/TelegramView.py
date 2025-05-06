@@ -31,3 +31,11 @@ class TelegramView:
 
     def generatingProcess(self, theme: str):
         return f"Генеруємо тест на тему {theme}"
+    
+    @staticmethod
+    def pickDifficult():
+        return f"Обери складність питань"
+
+    @staticmethod
+    def pickThemes():
+        return f"Обери теми для вивчення"

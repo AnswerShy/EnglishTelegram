@@ -7,17 +7,19 @@ class QuizController:
     def __init__(self):
         self.ai_service = AIService()
 
-    def generate_quiz(self, theme, difficult=0):
+    def generate_quiz(self, theme, difficult=""):
         if theme:
-            history = QuestionService.getQuestionsByTheme(theme["id"])
-        logger([history, theme["title"]])
-        data = self.ai_service.getNewAiQuestion(history, theme["title"])
+            history = QuestionService.get_questions_by_theme_and_difficult(theme["id"], difficult)
+        if difficult:
+            difficult = QuestionService.get_difficult_name(difficult)
+        logger([history, theme["title"], difficult])
+        data = self.ai_service.getNewAiQuestion(history, theme["title"], difficult["title"])
         if data: 
-            return QuestionService().createPack({
+            data = QuestionService().createPack({
                 "theme": ObjectId(theme["id"]),
                 "questions": data,
-                "difficult": difficult
-            })
+                "difficult": difficult["_id"]
+            }).to_dict()
         else:
             return "Failed to generate quiz data."
 
@@ -30,7 +32,7 @@ class QuizController:
 
     def start_quiz(self, user, ready_pack):
         try:
-            selected_pack_id = ready_pack.get("_id") if ready_pack else None
+            selected_pack_id = str(ready_pack.get("_id")) if ready_pack else None
             selected_question_index = user["active_session"]["current_index"] if user["active_session"] else 0
         except Exception as ex:
             import traceback

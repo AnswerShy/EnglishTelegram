@@ -28,8 +28,10 @@ def logger(text):
     elif isinstance(text, int):
         text_message = str(text)
     else:
+        text_message += "\n{\n"
         for i, a in enumerate(text):
             color = textColor.gray if i % 2 == 0 else textColor.white
             text_message += f"{color}{str(a)}{textColor.reset}\n"
+        text_message += "}"
 
     print(colored_time + file_info + text_message)

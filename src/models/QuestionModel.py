@@ -36,7 +36,7 @@ class QuestionModel:
     
     def save(self):
         result = question_packs_collection.insert_one(self.to_dict())
-        self._id = result.inserted_id
+        self.id = result.inserted_id
         return self
 
     @classmethod

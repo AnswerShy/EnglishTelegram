@@ -5,13 +5,14 @@ from .db import db
 users_collection = db['users']
 
 class UserModel:
-    def __init__(self, chat_id, name, picked_themes=None, experience=0, completed_quizzes=None, active_session=None, _id=None):
+    def __init__(self, chat_id, name, picked_themes=None, experience=0, completed_quizzes=None, active_session=None, _id=None, difficult=None):
         self.chat_id = chat_id
         self.name = name
         self.experience = experience
+        self.difficult = difficult
         self.subscribed = True
         self.picked_themes = picked_themes or []
-        self.completed_quizzes = completed_quizzes
+        self.completed_quizzes = completed_quizzes or []
         self.active_session = active_session
         self._id = ObjectId(_id) if _id else None
     
@@ -21,6 +22,7 @@ class UserModel:
             chat_id=data["chat_id"],
             name=data.get("name"),
             experience=data.get("experience", 0),
+            difficult=data.get("difficult", 0),
             picked_themes=data.get("picked_themes"),
             completed_quizzes=data.get("completed_quizzes"),
             active_session=data.get("active_session"),
@@ -32,8 +34,9 @@ class UserModel:
             "chat_id": self.chat_id,
             "name": self.name,
             "experience": self.experience,
+            "difficult": self.difficult,
             "picked_themes": self.picked_themes,
-            "completed_quizzes": self.completed_quizzes,
+            "completed_quizzes": self.completed_quizzes or [],
             "active_session": self.active_session,
             "subscribed": self.subscribed
         }
