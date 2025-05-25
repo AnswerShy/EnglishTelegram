@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./src:/app
+      - ./.env:/app/.env
     env_file:
       - path: ./.env
         required: true

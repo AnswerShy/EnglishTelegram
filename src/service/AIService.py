@@ -9,7 +9,7 @@ from utils import logger
 
 load_dotenv(find_dotenv())
 
-def buildThemePrompt(themes):
+def build_theme_prompt(themes):
     themeData = f"Не повторюй такі як: {json.dumps(themes, ensure_ascii=False, indent=2)}" if themes else ""
     return f"""
     Згенеруй масив із 10 унікальних тем для тестування знань з англійської мови.
@@ -24,7 +24,7 @@ def buildThemePrompt(themes):
     {themeData}
     """
 
-def buildQuizPrompt(history, theme, difficult):
+def build_quiz_prompt(history, theme, difficult):
     themeData = theme if theme else "IT"
     difficultData = difficult if difficult else "Begginer"
     historyData = f"Не повторюй такі питання: {json.dumps(history, ensure_ascii=False, indent=2)}" if history else ""
@@ -35,7 +35,8 @@ def buildQuizPrompt(history, theme, difficult):
         {{
             "question": "Текст питання",
             "answers": ["варіант 1", "варіант 2", "варіант 3", "варіант 4"],
-            "correctAnswer": "правильний варіант"
+            "correctAnswer": "правильний варіант",
+            "reasonOfAnswer": "аргументована відповіть чому відповідь саме така"
         }}
         ]
         ```
@@ -68,21 +69,22 @@ class AIService:
                     ],
                 })
             )
-            data = response.json()
-            return data.get('choices', [{}])[0].get('message', {}).get('content')
+            data = response.json().get('choices', [{}])[0].get('message', {}).get('content')
+            logger(data)
+            return data
         except Exception as e:
             logger(f"Error fetching AI question: {e}")
             return None
 
-    def getNewAiQuestion(self, history, theme, difficult):
+    def get_new_ai_question(self, history, theme, difficult):
         logger(f"Started generation new qestion pack: theme={theme} difficult={difficult}")
-        prompt = buildQuizPrompt(history, theme, difficult)
+        prompt = build_quiz_prompt(history, theme, difficult)
         data = self.get_questions(prompt)
         return self.parse_ai_questions(data) if data else None
     
-    def getNewAiThemes(self, themes):
+    def get_new_ai_themes(self, themes):
         logger("Started generation new themes")
-        prompt = buildThemePrompt(themes)
+        prompt = build_theme_prompt(themes)
         data = self.get_questions(prompt)
         return self.parse_ai_themes(data) if data else None
 
@@ -105,6 +107,7 @@ class AIService:
                 question_text = quiz.get('question', 'No question provided')
                 answers = quiz.get('answers', quiz.get('answer', []))
                 correct_answer = quiz.get('correctAnswer')
+                reason = quiz.get('reasonOfAnswer')
 
                 options = []
                 for i, answer in enumerate(answers):
@@ -119,9 +122,10 @@ class AIService:
 
                 quizzes.append({
                     'text': question_text,
-                    'options': options
+                    'options': options,
+                    'reason': reason
                 })
-
+            
             return quizzes
         
         except Exception as e:

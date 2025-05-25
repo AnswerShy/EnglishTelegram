@@ -11,21 +11,6 @@ class TelegramService:
         params = {'offset': offset, "timeout": 1000}
         response = requests.get(url, params=params)
         return response.json()
-    
-    """
-        send_message
-        explames:
-            simple message:
-                send_message(chat_id, "Hello world")
-            message with inline keyboard:
-                send_message(
-                    chat_id=123456789,
-                    text="What is the capital of France?",
-                    options=[
-                        {'text': 'Berlin', 'callback_data': 'wrong_answer'},
-                    ]
-                )
-    """
 
     def send_message(self, chat_id, text, options=None, message_id=None):
         """

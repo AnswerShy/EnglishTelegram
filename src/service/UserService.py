@@ -53,7 +53,7 @@ class UserService:
     def delete_session(chat_id,):
         return UserModel.update_user(chat_id, {"$set": {"active_session": []}})
             
-    def updateTheme(chat_id, theme_id):
+    def update_theme(chat_id, theme_id):
         user = UserModel.find_one({"chat_id": chat_id})
         if user:
             user = user.to_dict()
@@ -65,18 +65,18 @@ class UserService:
             return True
         return False
 
-    def updateDifficult(chat_id, difficult):
+    def update_difficult(chat_id, difficult):
         return UserModel.update_user(chat_id, {"$set": {"difficult": difficult}})
 
-    def getSubscribedThemes(chat_id):
+    def get_subscribed_themes(chat_id):
         user = UserModel.find_one({"chat_id": chat_id})
         if not user or not user.to_dict()["picked_themes"]:
             return []
         else:
             return user.to_dict()["picked_themes"]
 
-    def pushCompletedTask(chat_id, task_id):
+    def push_completed_task(chat_id, task_id):
         return UserModel.update_user(chat_id, {"$push": {"completed_quizzes": task_id}})
 
-    def getOne(chat_id):
-        return UserModel.find_one({"chat_id": chat_id})
+    def get_one(chat_id):
+        return UserModel.find_one({"chat_id": chat_id}).to_dict()

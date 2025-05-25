@@ -1,5 +1,6 @@
 from models import DifficultModel, ThemeModel
 from service import UserService
+from utils import logger
 from views.TelegramView import TelegramView
 
 class SubscribeController:
@@ -7,22 +8,27 @@ class SubscribeController:
         self.telegram = telegramService
         self.view = TelegramView()
 
-    def subscribeUser(self, chatID, username=None):
-        user = UserService.getOne(chatID)
-        if not user or not user.get("picked_themes"):
-            UserService.subscribe_user(chatID, username)
-            self.pickThemesMessage(chatID)
-            self.pickDifficult(chatID)
-        else:
-            UserService.subscribe_user(chatID, username)
-            self.telegram.send_message(chatID, self.view.subscribe_message())
+    def subscribe_user(self, chatID, username=None):
+        try:
+            user = UserService.get_one(chatID)
+            
+            
+            if not user or not user.get("picked_themes"):
+                UserService.subscribe_user(chatID, username)
+                self.pick_themes_message(chatID)
+                self.pick_difficult(chatID)
+            else:
+                UserService.subscribe_user(chatID, username)
+                self.telegram.send_message(chatID, self.view.subscribe_message())
+        except Exception as e:
+            logger(f"{e}")
 
-    def unsubscribeUser(self, chadID):
+    def unsubscribe_user(self, chadID):
         UserService.unsubscribe_user(chadID)
         self.telegram.send_message(chadID, self.view.unsubscribe_message())
 
-    def pickThemesMessage(self, chatID, messageID=None):
-        userPickedThemes = UserService.getSubscribedThemes(chatID)
+    def pick_themes_message(self, chatID, messageID=None):
+        userPickedThemes = UserService.get_subscribed_themes(chatID)
         themes = ThemeModel.find_all()
         options = []
         for theme in themes:
@@ -35,13 +41,13 @@ class SubscribeController:
                 display_name = name
             options.append({ 'text': display_name, 'callback_data': f"theme_pick:{id}" })
         if messageID:
-            self.telegram.send_message(chatID, self.view.pickThemes(), options, messageID)
+            self.telegram.send_message(chatID, self.view.pick_themes_message(), options, messageID)
         else:
-            self.telegram.send_message(chatID, self.view.pickThemes(), options)
+            self.telegram.send_message(chatID, self.view.pick_themes_message(), options)
 
-    def pickDifficult(self, chatID, messageID=None):
-        user = UserService.getOne(chatID)
-        userPickedDifficult = user.to_dict().get("difficult") if user else []
+    def pick_difficult(self, chatID, messageID=None):
+        user = UserService.get_one(chatID)
+        userPickedDifficult = user.get("difficult") if user else []
         userPickedDifficult = userPickedDifficult or []
         difficulties = DifficultModel.find_all()
         options = []
@@ -54,12 +60,12 @@ class SubscribeController:
                 display_name = name
             options.append({ 'text': display_name, 'callback_data': f"difficult_pick:{id}" })
         if messageID:
-            self.telegram.send_message(chatID, self.view.pickDifficult(), options, messageID)
+            self.telegram.send_message(chatID, self.view.pick_difficult(), options, messageID)
         else:
-            self.telegram.send_message(chatID, self.view.pickDifficult(), options)
+            self.telegram.send_message(chatID, self.view.pick_difficult(), options)
         
-    def addTheme(self, chatID, themeID):
-        return UserService.updateTheme(chatID, themeID)
+    def add_theme(self, chatID, themeID):
+        return UserService.update_theme(chatID, themeID)
         
-    def setDifficult(self, chatID, difficult):
-        return UserService.updateDifficult(chatID, difficult)
+    def set_difficult(self, chatID, difficult):
+        return UserService.update_difficult(chatID, difficult)

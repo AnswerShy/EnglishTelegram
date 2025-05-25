@@ -13,18 +13,20 @@ class QuizController:
         if difficult:
             difficult = QuestionService.get_difficult_name(difficult)
         logger([history, theme["title"], difficult])
-        data = self.ai_service.getNewAiQuestion(history, theme["title"], difficult["title"])
+        data = self.ai_service.get_new_ai_question(history, theme["title"], difficult["title"])
         if data: 
             data = QuestionService().createPack({
                 "theme": ObjectId(theme["id"]),
                 "questions": data,
                 "difficult": difficult["_id"]
             }).to_dict()
+            logger("End of generating test")
+            return data
         else:
             return "Failed to generate quiz data."
 
     def generate_themes(self, themes):
-        data = self.ai_service.getNewAiThemes(themes)
+        data = self.ai_service.get_new_ai_themes(themes)
         if data: 
             return data
         else:
@@ -56,17 +58,23 @@ class QuizController:
         
     def next_quiz(self, user):
         pack = user["active_session"].get("question_pack_id")
-        index = user["active_session"].get("current_index") + 1
+        index = user["active_session"].get("current_index")
+        indexNext = index + 1
         questions = QuestionService.getPack(pack)["questions"] if pack else []
-        if len(questions) == index:
+
+        reason = questions[index].get("reason") or None
+
+        if len(questions) == indexNext:
             return True
         if not questions:
             return False
+
         return {
-            "current": index,
+            "current": indexNext,
             "selected_pack_id": pack,
             "options": {
-                "text": questions[index]["text"],
-                "qeustions": questions[index]["options"]
-            }
+                "text": questions[indexNext]["text"],
+                "qeustions": questions[indexNext]["options"]
+            },
+            "reason": reason
         }

@@ -122,7 +122,7 @@ class BotController:
             for row in original_buttons:
                 for button in row:
                     if "✅" in button['text'] or "❌" in button['text']:
-                        self.send_message(chat_id, self.view.sendFewTimes())
+                        self.send_message(chat_id, self.view.send_few_times_message())
                         return
                     new_text = button['text']
                     new_callback = button['callback_data']
@@ -139,8 +139,8 @@ class BotController:
                 "pressed_index": pressed_index
             }
 
-    def send_message(self, chat_id, message, options=None):
-        return self.telegram_service.send_message(chat_id, message, options)
+    def send_message(self, chat_id, text, options=None, message_id=None):
+        return self.telegram_service.send_message(chat_id, text, options, message_id)
 
-    def editMessage(self, chat_id, message_id, message, options=None):
+    def edit_message(self, chat_id, message_id, message, options=None):
         self.telegram_service.send_message(chat_id, message, options, message_id)

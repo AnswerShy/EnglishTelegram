@@ -8,34 +8,43 @@ class TelegramView:
     def unsubscribe_message(self):
         return "Вже йдеш?\n\nЯкщо захочешь наново почати вирішувати задачки, ласкаво просимо\n\n/subscribe"
     
+    def subscribe_first_message(self):
+        return "❌ Спочатку треба підписатися!.\n\n/subscribe"
+
+    def theme_and_difficulty_first_message(self):
+        return "❌ Спочатку треба обрати теми та складність.\n\n/options."
+
     def wrong_answer_message(self):
         return "Неправильно!\n\n" 
 
     def correct_answer_message(self):
         return "Молодець!\n\n" 
 
-    def endTest(self):
+    def end_test(self):
         return "🎉Вітаємо!\n\nТест завершено, чекайте на нові тести..." 
+
+    def no_test(self):
+        return "Схоже... тест неактивний 😭" 
     
     def error(self):
         return "Сталась якась помилка!\n\nСхоже, я трохи захворів🤒..." 
     
-    def sendFewTimes(self):
+    def send_few_times_message(self):
         return "U cant answer in same question two times!!"
     
-    def doNotRush(self):
+    def do_not_rush_message(self):
         return "Не спіши відповідати, встигнеш 😉"
 
-    def StartingTheme(self, theme: str):
+    def starting_theme_message(self, theme: str):
         return f"Тема тесту: {theme}"
 
-    def generatingProcess(self, theme: str):
+    def generating_process_message(self, theme: str):
         return f"Генеруємо тест на тему {theme}"
     
     @staticmethod
-    def pickDifficult():
+    def pick_difficult():
         return f"Обери складність питань"
 
     @staticmethod
-    def pickThemes():
+    def pick_themes_message():
         return f"Обери теми для вивчення"
