@@ -19,8 +19,7 @@ class QuizController:
                 "theme": ObjectId(theme["id"]),
                 "questions": data,
                 "difficult": difficult["_id"]
-            }).to_dict()
-            logger("End of generating test")
+            })
             return data
         else:
             return "Failed to generate quiz data."
@@ -35,7 +34,7 @@ class QuizController:
     def start_quiz(self, user, ready_pack):
         try:
             selected_pack_id = str(ready_pack.get("_id")) if ready_pack else None
-            selected_question_index = user["active_session"]["current_index"] if user["active_session"] else 0
+            selected_question_index = user.active_session["current_index"] if user.active_session else 0
         except Exception as ex:
             import traceback
             traceback.print_exc()
@@ -57,17 +56,34 @@ class QuizController:
         }
         
     def next_quiz(self, user):
-        pack = user["active_session"].get("question_pack_id")
-        index = user["active_session"].get("current_index")
+        pack = user.active_session.get("question_pack_id")
+        index = user.active_session.get("current_index")
         indexNext = index + 1
         questions = QuestionService.getPack(pack)["questions"] if pack else []
 
+        if not questions:
+            return {
+                "current": False,
+                "selected_pack_id": 0,
+                "options": {
+                    "text": None,
+                    "qeustions": None
+                },
+                "reason": None
+            }
+
         reason = questions[index].get("reason") or None
 
-        if len(questions) == indexNext:
-            return True
-        if not questions:
-            return False
+        if len(questions)-1 == index:
+            return {
+                "current": True,
+                "selected_pack_id": pack,
+                "options": {
+                    "text": questions[index]["text"],
+                    "qeustions": questions[index]["options"]
+                },
+                "reason": reason
+            }
 
         return {
             "current": indexNext,

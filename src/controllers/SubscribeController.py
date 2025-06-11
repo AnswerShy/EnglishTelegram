@@ -11,9 +11,7 @@ class SubscribeController:
     def subscribe_user(self, chatID, username=None):
         try:
             user = UserService.get_one(chatID)
-            
-            
-            if not user or not user.get("picked_themes"):
+            if not user or not user.picked_themes:
                 UserService.subscribe_user(chatID, username)
                 self.pick_themes_message(chatID)
                 self.pick_difficult(chatID)
@@ -47,7 +45,7 @@ class SubscribeController:
 
     def pick_difficult(self, chatID, messageID=None):
         user = UserService.get_one(chatID)
-        userPickedDifficult = user.get("difficult") if user else []
+        userPickedDifficult = user.difficult if user else []
         userPickedDifficult = userPickedDifficult or []
         difficulties = DifficultModel.find_all()
         options = []

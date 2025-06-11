@@ -1,4 +1,4 @@
-# bootstrap.py
+import threading
 import time
 from dotenv import load_dotenv, find_dotenv
 import os
@@ -47,28 +47,25 @@ def run_bot_loop(bot, VeiwInstance, QuizControllerInstance, TelegramBotControlle
             time.sleep(1)
 
 def handle_command(data, SubscribeControllerInstance, TelegramBotController, QuizControllerInstance, ThemeServiceInstance, VeiwInstance):
-    
-    if data and data["type"] == "command" and data["command"] != 'test':
-        
-        if data["command"] == 'sub':
-            SubscribeControllerInstance.subscribe_user(data["chat_id"])
-        elif data["command"] == 'unsub':
-            SubscribeControllerInstance.unsubscribe_user(data["chat_id"])
-        elif data["command"] == 'options':
-            SubscribeControllerInstance.pick_themes_message(data["chat_id"])
-            SubscribeControllerInstance.pick_difficult(data["chat_id"])
-        elif data["command"] == 'stop':
+    if data["command"] == 'subscribe':
+        SubscribeControllerInstance.subscribe_user(data["chat_id"])
+    elif data["command"] == 'unsubscribe':
+        SubscribeControllerInstance.unsubscribe_user(data["chat_id"])
+    elif data["command"] == 'options':
+        SubscribeControllerInstance.pick_themes_message(data["chat_id"])
+        SubscribeControllerInstance.pick_difficult(data["chat_id"])
+    elif data["command"] == 'stop':
             UserService.delete_session(data["chat_id"])
     elif data["command"] == 'test':
         user = UserService.get_one(data["chat_id"])
-        if not user or not user.get("subscribed"):
+        if not user or not user.subscribed:
             TelegramBotController.send_message(data["chat_id"], VeiwInstance.subscribe_first_message())
-        elif not user.get("picked_themes") or not user.get("difficult"): 
+        elif not user.picked_themes or not user.difficult: 
             TelegramBotController.send_message(data["chat_id"], VeiwInstance.theme_and_difficulty_first_message())
         else:
-            active_session = user["active_session"]
+            active_session = user.active_session
             if active_session:
-                pack = QuestionService.getPack(user["active_session"]["question_pack_id"])
+                pack = QuestionService.getPack(user.active_session["question_pack_id"])
                 if pack:
                     quizData = QuizControllerInstance.start_quiz(user, pack)
                 else:
@@ -77,13 +74,13 @@ def handle_command(data, SubscribeControllerInstance, TelegramBotController, Qui
                 sortedUserThemesUsage = QuestionService.get_users_packs_usage(user)
                 theme = ThemeServiceInstance.pick_least_used_theme(sortedUserThemesUsage)
                 
-                completed_packs = user.get("completed_quizzes", [])
-                difficult = user.get("difficult", [])
+                completed_packs = user.completed_quizzes
+                difficult = user.difficult
                 uncompletedTasks = QuestionService.getUncompletedTasks(completed_packs, theme, difficult)
+
                 if not uncompletedTasks:
                     TelegramBotController.send_message(data["chat_id"], VeiwInstance.generating_process_message(theme["title"]))
                     newPack = QuizControllerInstance.generate_quiz(theme, difficult)
-                    
                     quizData = QuizControllerInstance.start_quiz(user, newPack)
                 else:
                     pack = uncompletedTasks[0]
@@ -97,35 +94,42 @@ def handle_command(data, SubscribeControllerInstance, TelegramBotController, Qui
                 UserService.update_session(data["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"], quizData["options"].get("text"))
             
             if not active_session and theme and uncompletedTasks and len(uncompletedTasks) < 2:
-                newPack = QuizControllerInstance.generate_quiz(theme, difficult)
+                def generate_second_quiz():
+                    try:
+                        logger(f"starting genereting new pack on second thread...")
+                        QuizControllerInstance.generate_quiz(theme, difficult)
+                    except Exception as e:
+                        logger(f"Failed to pre-generate second quiz pack: {e}")
+                threading.Thread(target=generate_second_quiz).start()
 
 def handle_callback(data, SubscribeControllerInstance, TelegramBotController, VeiwInstance, QuizControllerInstance):
     if data["command"] == 'theme_pick':
-        changedTheme = SubscribeControllerInstance.add_theme(data["chat_id"], data["data"])
+        SubscribeControllerInstance.add_theme(data["chat_id"], data["data"])
         SubscribeControllerInstance.pick_themes_message(data["chat_id"], data["callback_message_id"])
-        logger(f"{changedTheme}")
     if data["command"] == 'difficult_pick':
-        changedTheme = SubscribeControllerInstance.set_difficult(data["chat_id"], data["data"])
+        SubscribeControllerInstance.set_difficult(data["chat_id"], data["data"])
         SubscribeControllerInstance.pick_difficult(data["chat_id"], data["callback_message_id"])
-        logger(f"{changedTheme}")
     if data["command"] == 'T' or data["command"] == 'F':
         user = UserService.get_one(data["chat_id"])
-        if user["active_session"] and not user["active_session"]["last_question"] == data["callback_text"]:
+        if user.active_session and not user.active_session["last_question"] == data["callback_text"]:
             TelegramBotController.send_message(data["chat_id"], VeiwInstance.do_not_rush_message())
-        elif not user["active_session"]:
+        elif not user.active_session:
             TelegramBotController.send_message(data["chat_id"], VeiwInstance.no_test())
         else:
             quizData = QuizControllerInstance.next_quiz(user)
-            if isinstance(quizData, bool):
-                if quizData == True:
-                    print(user["active_session"])
-                    UserService.push_completed_task(data["chat_id"], user["active_session"].get("question_pack_id"))
+
+            textString = f'{data["callback_text"]}:\n\n{quizData["reason"] if quizData["reason"] else ""}'
+            TelegramBotController.send_message(data["chat_id"], textString, data["updated_reply_markup"], user.active_session["message_id"])
+
+            if isinstance(quizData["current"], bool):
+                print(quizData["current"])
+                if quizData["current"] == True:
+                    UserService.push_completed_task(data["chat_id"], user.active_session.get("question_pack_id"))
                     UserService.delete_session(data["chat_id"])
                     TelegramBotController.send_message(data["chat_id"], VeiwInstance.end_test())
                 else:
+                    return
                     TelegramBotController.send_message(data["chat_id"], VeiwInstance.error())
             else:
-                textString = f'{data["callback_text"]}:\n{quizData["reason"] if quizData["reason"] else ""}'
-                TelegramBotController.send_message(data["chat_id"], textString, data["updated_reply_markup"], user["active_session"]["message_id"])
                 quizMessage = TelegramBotController.send_message(data["chat_id"], quizData["options"].get("text"), quizData["options"].get("qeustions"))
                 UserService.update_session(data["chat_id"], quizData["selected_pack_id"], quizMessage, quizData["current"], quizData["options"].get("text"))

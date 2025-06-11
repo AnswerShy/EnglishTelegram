@@ -77,10 +77,10 @@ class BotController:
             if message == '/start':
                 self.send_message(data["chat_id"], self.view.start_message())
             elif message == '/subscribe':
-                result["command"] = 'sub'
+                result["command"] = 'subscribe'
                 return result
             elif message == '/unsubscribe':
-                result["command"] = 'unsub'
+                result["command"] = 'unsubscribe'
                 return result
             elif message == '/options':
                 result["command"] = 'options'
@@ -128,6 +128,8 @@ class BotController:
                     new_callback = button['callback_data']
                     if new_callback == callback_data:
                         new_text += " ✅" if is_correct else " ❌"
+                    if not is_correct and "T" in new_callback and "❌" not in new_text and "✅" not in new_text:
+                        new_text += " 👍"
                     updated_buttons.append({"text": new_text, "callback_data": new_callback})
             return {
                 "type": "callback",

@@ -30,7 +30,14 @@ class QuestionService:
             difficult=pack["difficult"]
         )
         new_pack.save()
-        return new_pack
+
+        saved = QuestionModel.findOne({
+            "theme": pack["theme"],
+            "difficult": pack["difficult"],
+            "questions": pack["questions"]
+        })
+        
+        return saved
 
     def get_questions_by_theme_and_difficult(theme, difficult):
         query = {
@@ -56,8 +63,8 @@ class QuestionService:
     
     @staticmethod
     def get_users_packs_usage(user):
-        user_theme_ids = user.get("picked_themes", [])
-        completed_packs = user.get("completed_quizzes", [])
+        user_theme_ids = user.picked_themes
+        completed_packs = user.completed_quizzes
         
         theme_usage = {theme_id: 0 for theme_id in user_theme_ids}
         

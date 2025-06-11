@@ -14,4 +14,4 @@ RUN pip install -U python-dotenv
 
 COPY ./src /app
 
-CMD ["python", "main.py"]
+CMD ["python", "-u" ,"main.py"]
